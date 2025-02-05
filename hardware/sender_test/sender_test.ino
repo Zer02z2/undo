@@ -20,8 +20,10 @@ const int numOfReadings = 10;
 int pm1Readings[numOfReadings];
 int readIndex = 0;
 
-EncoderStepCounter encoder(ENCODER_PIN1, ENCODER_PIN2);
-int oldPosition = 0;
+EncoderStepCounter encoderX(ENCODER_PIN1, ENCODER_PIN2);
+EncoderStepCounter encoderY(ENCODER_PIN3, ENCODER_PIN4);
+int oldPositionX = 0;
+int oldPositionY = 0;
 
 int lastButtonState = 0;
 
@@ -29,8 +31,8 @@ long lastSendTime = 0;
 int sendInterval = 100;
 
 void setup() {
-  pinMode(BUTTON_PIN, INPUT);
   Watchdog.enable(8000);
+  pinMode(BUTTON_PIN, INPUT);
   //Initialize serial and wait for port to open:
   Serial.begin(9600);
   // while (!Serial) {
@@ -43,8 +45,9 @@ void setup() {
   while (WiFi.begin(ssid, pass) != WL_CONNECTED) {
     // failed, retry
     Serial.print(".");
-    delay(5000);
+    delay(1000);
   }
+  Watchdog.reset();
 
   Serial.println("You're connected to the network");
   Serial.println();
@@ -76,15 +79,19 @@ void setup() {
     pm1Readings[i] = 0;
   }
 
-  encoder.begin();
+  encoderX.begin();
+  encoderY.begin();
   attachInterrupt(ENCODER_INT1, interrupt, CHANGE);
   attachInterrupt(ENCODER_INT2, interrupt, CHANGE);
+  attachInterrupt(ENCODER_INT3, interrupt, CHANGE);
+  attachInterrupt(ENCODER_INT4, interrupt, CHANGE);
 
   Watchdog.reset();
 }
 
 void interrupt() {
-  encoder.tick();
+  encoderX.tick();
+  encoderY.tick();
 }
 
 void loop() {
@@ -93,20 +100,38 @@ void loop() {
 
   mqttClient.poll();
 
-  int position = encoder.getPosition();
+  int positionX = encoderX.getPosition();
+  int positionY = encoderY.getPosition();
 
-  if (position != oldPosition) {
+  if (positionX != oldPositionX) {
     int result = 0;
-    if (position > oldPosition) {
+    if (positionX > oldPositionX) {
       result = 1;
     }
-    if (position < oldPosition) {
+    if (positionX < oldPositionX) {
       result = 0;
     }
-    oldPosition = position;
+    oldPositionX = positionX;
     Serial.print("Send encoder: ");
     mqttClient.beginMessage(topic);
-    mqttClient.print("encoder:");
+    mqttClient.print("encoderX:");
+    mqttClient.print(result);
+    mqttClient.endMessage();
+    Serial.println(result);
+  }
+
+  if (positionY != oldPositionY) {
+    int result = 0;
+    if (positionY > oldPositionY) {
+      result = 1;
+    }
+    if (positionY < oldPositionY) {
+      result = 0;
+    }
+    oldPositionY = positionY;
+    Serial.print("Send encoder: ");
+    mqttClient.beginMessage(topic);
+    mqttClient.print("encoderY:");
     mqttClient.print(result);
     mqttClient.endMessage();
     Serial.println(result);
