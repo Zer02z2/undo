@@ -6,6 +6,10 @@ import { faceOvalIndexes } from "./faceOvalIndexes"
 
 const init = async () => {
   const canvas = createCanvas()
+  const ctx = canvas.getContext("2d")
+  if (!ctx) return
+  ctx.translate(canvas.width, 0)
+  ctx.scale(-1, 1)
   document.body.appendChild(canvas)
   const video = await initWebcam()
   video.addEventListener("loadeddata", async () => {
@@ -57,8 +61,13 @@ const analyzeFace = async (
   video: HTMLVideoElement,
   canvas: HTMLCanvasElement
 ) => {
+  requestAnimationFrame(async () => {
+    await analyzeFace(detector, video, canvas)
+  })
+
   const estimationConfig = { flipHorizontal: true }
   const faces = await detector.estimateFaces(video, estimationConfig)
+  if (!faces[0]) return
   const faceOvals = faceOvalIndexes.map((index) => faces[0].keypoints[index])
 
   const ctx = canvas.getContext("2d")
@@ -69,28 +78,34 @@ const analyzeFace = async (
   maskCtx.fillStyle = "rgba(0, 0, 0, 0)"
   maskCtx.fillRect(0, 0, mask.width, mask.height)
 
-  ctx.clearRect(0, 0, canvas.width, canvas.height)
-  ctx.strokeStyle = "red"
-  ctx.beginPath()
-  ctx.moveTo(faceOvals[0].x, faceOvals[0].y)
+  maskCtx.beginPath()
+  maskCtx.moveTo(faceOvals[0].x, faceOvals[0].y)
   const length = faceOvals.length
   for (let i = 1; i < length - 2; i++) {
     const x2 = (faceOvals[i].x + faceOvals[i + 1].x) / 2
     const y2 = (faceOvals[i].y + faceOvals[i + 1].y) / 2
-    ctx.quadraticCurveTo(faceOvals[i].x, faceOvals[i].y, x2, y2)
+    maskCtx.quadraticCurveTo(faceOvals[i].x, faceOvals[i].y, x2, y2)
   }
-  ctx.quadraticCurveTo(
+  maskCtx.quadraticCurveTo(
     faceOvals[length - 2].x,
     faceOvals[length - 2].y,
     faceOvals[length - 1].x,
     faceOvals[length - 1].y
   )
-  ctx.closePath()
-  ctx.stroke()
+  maskCtx.closePath()
+  maskCtx.fillStyle = "rgba(0, 0, 0, 255)"
+  maskCtx.fill()
 
-  requestAnimationFrame(async () => {
-    await analyzeFace(detector, video, canvas)
-  })
+  ctx.clearRect(0, 0, canvas.width, canvas.height)
+  ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
+
+  const canvasData = ctx.getImageData(0, 0, canvas.width, canvas.height)
+  const maskData = maskCtx.getImageData(0, 0, mask.width, mask.height)
+  for (let i = 0; i < canvasData.data.length; i += 4) {
+    canvasData.data[i + 3] = maskData.data[i + 3]
+  }
+  ctx.clearRect(0, 0, canvas.width, canvas.height)
+  ctx.putImageData(canvasData, 0, 0)
 }
 
 init()
