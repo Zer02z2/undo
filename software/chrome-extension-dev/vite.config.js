@@ -13,6 +13,10 @@ function mediapipe_workaround() {
         let code = fs.readFileSync(id, "utf-8")
         code += "exports.Hands = Hands;"
         return { code }
+      } else if (basename(id) === "face_mesh.js") {
+        let code = fs.readFileSync(id, "utf-8")
+        //code += "exports.FaceMesh = FaceMesh;"
+        return { code }
       } else {
         return null
       }
@@ -22,11 +26,15 @@ function mediapipe_workaround() {
 
 export default {
   build: {
+    assetsDir: "",
     rollupOptions: {
       plugins: [mediapipe_workaround()],
       input: {
-        main: "/index.html",
-        content: "/src/index.html",
+        main: "/src/main.ts",
+      },
+      output: {
+        dir: "../chrome-extension",
+        entryFileNames: "content.js",
       },
     },
   },

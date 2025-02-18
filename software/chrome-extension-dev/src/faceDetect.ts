@@ -1,10 +1,21 @@
-import "@mediapipe/face_mesh"
+import * as faceLandmarksDetection from "@tensorflow-models/face-landmarks-detection"
 import "@tensorflow/tfjs-core"
 import "@tensorflow/tfjs-backend-webgl"
-import * as faceLandmarksDetection from "@tensorflow-models/face-landmarks-detection"
+import "@mediapipe/face_mesh"
 import { faceOvalIndexes } from "./faceOvalIndexes"
 
-const init = async () => {
+interface FaceDetector {
+  detector: faceLandmarksDetection.FaceLandmarksDetector
+  canvas: HTMLCanvasElement
+  video: HTMLVideoElement
+}
+
+const mousePositions = {
+  x: 0,
+  y: 0,
+}
+
+const createFaceDetect = async () => {
   const canvas = createCanvas()
   const ctx = canvas.getContext("2d")
   if (!ctx) return
@@ -12,9 +23,23 @@ const init = async () => {
   ctx.scale(-1, 1)
   document.body.appendChild(canvas)
   const video = await initWebcam()
-  video.addEventListener("loadeddata", async () => {
-    const faceDetector = await initFaceDetect()
-    analyzeFace(faceDetector, video, canvas)
+  document.addEventListener("mousemove", (event) => {
+    mousePositions.x = event.clientX
+    mousePositions.y = event.clientY
+  })
+  return new Promise<FaceDetector>((resolve) => {
+    video.addEventListener(
+      "loadeddata",
+      async () => {
+        const faceDetector = await initFaceDetect()
+        resolve({
+          detector: faceDetector,
+          canvas: canvas,
+          video: video,
+        })
+      },
+      { once: true }
+    )
   })
 }
 
@@ -56,15 +81,8 @@ const initFaceDetect = async () => {
   return detector
 }
 
-const analyzeFace = async (
-  detector: faceLandmarksDetection.FaceLandmarksDetector,
-  video: HTMLVideoElement,
-  canvas: HTMLCanvasElement
-) => {
-  requestAnimationFrame(async () => {
-    await analyzeFace(detector, video, canvas)
-  })
-
+const analyzeFace = async (faceDetector: FaceDetector) => {
+  const { detector, canvas, video } = faceDetector
   const estimationConfig = { flipHorizontal: true }
   const faces = await detector.estimateFaces(video, estimationConfig)
   if (!faces[0]) return
@@ -106,6 +124,14 @@ const analyzeFace = async (
   }
   ctx.clearRect(0, 0, canvas.width, canvas.height)
   ctx.putImageData(canvasData, 0, 0)
+
+  const { x, y } = mousePositions
+  canvas.style.transform = `translateX(${x - canvas.width / 2}px) translateY(${
+    y - canvas.height / 2
+  }px)`
 }
 
-init()
+export const faceDetect = {
+  create: createFaceDetect,
+  analyze: analyzeFace,
+}
