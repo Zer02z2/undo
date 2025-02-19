@@ -155,28 +155,32 @@ export const stream = () => {
         outerRange * 2,
         outerRange * 2
       )
-      const data = imageData.data
 
-      for (let x = 0; x < outerRange * 2; x++) {
-        for (let y = 0; y < outerRange * 2; y++) {
-          // const dist = Math.sqrt((mouseX - x) ** 2 + (mouseY - y) ** 2)
-          // if (dist >= innerRange && dist < outerRange) {
-          //   const alpha = Math.floor(
-          //     (1 - (dist - innerRange) / (outerRange - innerRange)) * 255
-          //   )
-          //   const index = (y * canvas.width + x) * 4
-          //   data[index + 3] = alpha
-          // } else if (dist >= outerRange) {
-          //   const index = (y * canvas.width + x) * 4
-          //   data[index + 3] = 0
-          // }
-          if (y % 4 == 0 || y % 6 == 0) {
-            const index = (outerRange * 2 * y + x) * 4
-            data[index + 3] = random(40, 100)
-          }
-        }
-      }
+      // const data = imageData.data
+      // for (let x = 0; x < outerRange * 2; x++) {
+      //   for (let y = 0; y < outerRange * 2; y++) {
+      //     const dist = Math.sqrt((x - outerRange) ** 2 + (y - outerRange) ** 2)
+      //     if (dist >= innerRange && dist < outerRange) {
+      //       const alpha = Math.floor(
+      //         (1 - (dist - innerRange) / (outerRange - innerRange)) * 255
+      //       )
+      //       const index = (y * outerRange * 2 + x) * 4
+      //       data[index + 3] = alpha
+      //     } else if (dist >= outerRange) {
+      //       const index = (y * outerRange * 2 + x) * 4
+      //       data[index + 3] = 0
+      //     }
+      //   }
+      // }
       ctx.clearRect(0, 0, canvas.width, canvas.height)
+      ctx.fillStyle = "rgb(91, 247, 77)"
+      const borderWidth = 10
+      ctx.fillRect(
+        mouseX - outerRange - borderWidth,
+        mouseY - outerRange - borderWidth,
+        outerRange * 2 + borderWidth * 2,
+        outerRange * 2 + borderWidth * 2
+      )
       ctx.putImageData(imageData, mouseX - outerRange, mouseY - outerRange)
     })
     requestAnimationFrame(animate)
@@ -216,6 +220,6 @@ export const stream = () => {
   animate()
 }
 
-const random = (low: number, high: number) => {
-  return low + Math.random() * (high - low)
-}
+// const random = (low: number, high: number) => {
+//   return low + Math.random() * (high - low)
+// }
