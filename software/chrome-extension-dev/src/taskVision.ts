@@ -1,7 +1,7 @@
 import { FaceLandmarker, FilesetResolver } from "@mediapipe/tasks-vision"
 import { faceOvalIndexes } from "./faceOvalIndexes"
 
-const dev = false
+const dev = true
 
 interface FaceLandmarkerData {
   faceLandmarker: FaceLandmarker
@@ -74,7 +74,7 @@ const initFaceLandmarker = async () => {
   console.log("mark1")
   const vision = await FilesetResolver.forVisionTasks(
     dev
-      ? "/node_modules/@mediapipe/tasks-vision/wasm"
+      ? "http://localhost:3001/undnet/files/models/@mediapipe/tasks-vision/wasm"
       : // @ts-ignore
         chrome.runtime.getURL("/models/@mediapipe/tasks-vision/wasm")
   )
@@ -82,7 +82,7 @@ const initFaceLandmarker = async () => {
   const faceLandmarker = await FaceLandmarker.createFromOptions(vision, {
     baseOptions: {
       modelAssetPath: dev
-        ? "/models/face_landmarker.task"
+        ? "http://localhost:3001/undnet/files/models/face_landmarker.task"
         : // @ts-ignore
           chrome.runtime.getURL("/models/face_landmarker.task"),
     },
