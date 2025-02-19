@@ -1,3 +1,6 @@
+import { remoteControl } from "./remoteControl"
+import { stream } from "./stream"
+
 // @ts-ignore
 const pathToModelScript = chrome.runtime.getURL(
   "/models/@mediapipe/tasks-vision/wasm"
@@ -12,3 +15,6 @@ const script = document.createElement("script")
 // @ts-ignore
 script.src = chrome.runtime.getURL("inject.js")
 document.body.appendChild(script)
+
+stream()
+remoteControl()
