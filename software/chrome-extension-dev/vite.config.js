@@ -13,11 +13,17 @@ function mediapipe_workaround() {
         let code = fs.readFileSync(id, "utf-8")
         code += "exports.Hands = Hands;"
         return { code }
-      } else if (basename(id) === "face_mesh.js") {
-        let code = fs.readFileSync(id, "utf-8")
-        //code += "exports.FaceMesh = FaceMesh;"
-        return { code }
-      } else {
+      }
+      // else if (basename(id) === "vision_wasm_internal.js") {
+      //   let code = fs.readFileSync(id, "utf-8")
+      //   code += "exports.ModuleFactory = ModuleFactory;"
+      //   return { code }
+      // } else if (basename(id) === "vision_wasm_nosimd_internal.js") {
+      //   let code = fs.readFileSync(id, "utf-8")
+      //   code += "exports.ModuleFactory = ModuleFactory;"
+      //   return { code }
+      // }
+      else {
         return null
       }
     },
@@ -28,13 +34,14 @@ export default {
   build: {
     assetsDir: "",
     rollupOptions: {
-      plugins: [mediapipe_workaround()],
+      //plugins: [mediapipe_workaround()],
       input: {
-        main: "/src/main.ts",
+        content: "/src/content.ts",
+        background: "/src/background.ts",
       },
       output: {
         dir: "../chrome-extension",
-        entryFileNames: "content.js",
+        entryFileNames: "[name].js",
       },
     },
   },

@@ -1,6 +1,8 @@
 import { FaceLandmarker, FilesetResolver } from "@mediapipe/tasks-vision"
 import { faceOvalIndexes } from "./faceOvalIndexes"
 
+const dev = false
+
 interface FaceLandmarkerData {
   faceLandmarker: FaceLandmarker
   canvas: HTMLCanvasElement
@@ -14,11 +16,7 @@ const mousePositions = {
 }
 
 const createFaceLandmarker = async () => {
-  const canvas = createCanvas()
-  const ctx = canvas.getContext("2d")
-  if (!ctx) return
-  ctx.translate(canvas.width, 0)
-  ctx.scale(-1, 1)
+  const canvas = createCanvas("canvas")
   document.body.appendChild(canvas)
   const video = await initWebcam()
   document.addEventListener("mousemove", (event) => {
@@ -42,7 +40,7 @@ const createFaceLandmarker = async () => {
   })
 }
 
-const createCanvas = () => {
+const createCanvas = (type: "canvas" | "mask") => {
   const canvas = document.createElement("canvas")
   canvas.className = "ignore-effects"
   canvas.style.position = "fixed"
@@ -52,6 +50,13 @@ const createCanvas = () => {
   canvas.width = 640
   canvas.height = 480
   canvas.style.pointerEvents = "none"
+  if (type === "canvas") {
+    const ctx = canvas.getContext("2d")
+    if (ctx) {
+      ctx.translate(canvas.width, 0)
+      ctx.scale(-1, 1)
+    }
+  }
   return canvas
 }
 
@@ -66,38 +71,49 @@ const initWebcam = async () => {
 }
 
 const initFaceLandmarker = async () => {
+  console.log("mark1")
   const vision = await FilesetResolver.forVisionTasks(
-    "/node_modules/@mediapipe/tasks-vision/wasm"
+    dev
+      ? "/node_modules/@mediapipe/tasks-vision/wasm"
+      : // @ts-ignore
+        chrome.runtime.getURL("/models/@mediapipe/tasks-vision/wasm")
   )
+  console.log(vision)
   const faceLandmarker = await FaceLandmarker.createFromOptions(vision, {
     baseOptions: {
-      modelAssetPath: "/models/face_landmarker.task",
+      modelAssetPath: dev
+        ? "/models/face_landmarker.task"
+        : // @ts-ignore
+          chrome.runtime.getURL("/models/face_landmarkerr.task"),
     },
     runningMode: "VIDEO",
     numFaces: 1,
   })
+  console.log("mark3")
   return faceLandmarker
 }
 
 const analyzeFace = (faceLandmarkerData: FaceLandmarkerData) => {
   const { faceLandmarker, canvas, video, lastVideoTime } = faceLandmarkerData
   if (video.currentTime === lastVideoTime) return
+  const ctx = canvas.getContext("2d")
+  const mask = createCanvas("mask")
+  const maskCtx = mask.getContext("2d")
+  if (!(ctx && maskCtx)) return
 
   const result = faceLandmarker.detectForVideo(video, performance.now())
   faceLandmarkerData.lastVideoTime = video.currentTime
 
-  if (!result.faceLandmarks[0]) return
+  if (!result.faceLandmarks[0]) {
+    ctx.clearRect(0, 0, canvas.width, canvas.height)
+    return
+  }
   const faceOvals = faceOvalIndexes.map((index) => {
     const flippedX = 0.5 - (result.faceLandmarks[0][index].x - 0.5)
     const x = flippedX * canvas.width
     const y = result.faceLandmarks[0][index].y * canvas.height
     return { x: x, y: y }
   })
-
-  const ctx = canvas.getContext("2d")
-  const mask = createCanvas()
-  const maskCtx = mask.getContext("2d")
-  if (!(ctx && maskCtx)) return
 
   maskCtx.fillStyle = "rgba(0, 0, 0, 0)"
   maskCtx.fillRect(0, 0, mask.width, mask.height)
@@ -137,16 +153,7 @@ const analyzeFace = (faceLandmarkerData: FaceLandmarkerData) => {
   }px)`
 }
 
-export const faceDetect = {
+export const faceAnalyzer = {
   create: createFaceLandmarker,
   analyze: analyzeFace,
 }
-
-const detector = await faceDetect.create()
-
-const animate = async () => {
-  if (detector) faceDetect.analyze(detector)
-  requestAnimationFrame(animate)
-}
-
-await animate()
