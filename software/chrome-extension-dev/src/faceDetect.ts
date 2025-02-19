@@ -74,10 +74,12 @@ const initFaceDetect = async () => {
       solutionPath: "https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh",
       refineLandmarks: false,
     }
+  console.log("1")
   const detector = await faceLandmarksDetection.createDetector(
     model,
     detectorConfig
   )
+  console.log("2")
   return detector
 }
 
