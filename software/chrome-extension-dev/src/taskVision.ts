@@ -84,7 +84,7 @@ const initFaceLandmarker = async () => {
       modelAssetPath: dev
         ? "/models/face_landmarker.task"
         : // @ts-ignore
-          chrome.runtime.getURL("/models/face_landmarkerr.task"),
+          chrome.runtime.getURL("/models/face_landmarker.task"),
     },
     runningMode: "VIDEO",
     numFaces: 1,

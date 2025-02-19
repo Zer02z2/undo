@@ -1,13 +1,13 @@
-// import { faceLandmarker } from "./taskVision"
+import { faceAnalyzer } from "./taskVision"
 
-// const initModels = async () => {
-//   const faceData = await faceLandmarker.create()
-//   if (!faceData) return
-//   const analyzeFace = async () => {
-//     faceLandmarker.analyze(faceData)
-//     requestAnimationFrame(analyzeFace)
-//   }
-//   analyzeFace()
-// }
+const initModels = async () => {
+  const faceData = await faceAnalyzer.create()
+  if (!faceData) return
+  const analyzeFace = async () => {
+    faceAnalyzer.analyze(faceData)
+    requestAnimationFrame(analyzeFace)
+  }
+  analyzeFace()
+}
 
-// initModels()
+initModels()
