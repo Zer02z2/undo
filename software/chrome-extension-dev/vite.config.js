@@ -36,7 +36,7 @@ export default {
     rollupOptions: {
       //plugins: [mediapipe_workaround()],
       input: {
-        content: "/src/content.ts",
+        inject: "/src/main.ts",
         background: "/src/background.ts",
       },
       output: {
