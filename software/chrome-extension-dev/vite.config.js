@@ -36,8 +36,9 @@ export default {
     rollupOptions: {
       //plugins: [mediapipe_workaround()],
       input: {
-        inject: "/src/main.ts",
+        inject: "/src/inject.ts",
         background: "/src/background.ts",
+        content: "/src/content.ts",
       },
       output: {
         dir: "../chrome-extension",

@@ -1,3 +1,1 @@
-const script = document.createElement("script")
-script.src = chrome.runtime.getURL("inject.js")
-document.body.appendChild(script)
+const t=chrome.runtime.getURL("/models/@mediapipe/tasks-vision/wasm"),o=chrome.runtime.getURL("/models/face_landmarker.task");localStorage.setItem("pathToModelScript",t);localStorage.setItem("pathToModel",o);const e=document.createElement("script");e.src=chrome.runtime.getURL("inject.js");document.body.appendChild(e);

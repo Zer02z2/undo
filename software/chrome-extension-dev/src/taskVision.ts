@@ -1,7 +1,7 @@
 import { FaceLandmarker, FilesetResolver } from "@mediapipe/tasks-vision"
 import { faceOvalIndexes } from "./faceOvalIndexes"
 
-const dev = true
+const dev = false
 
 const headWidth = 640 / 1.5
 const headHeight = 480 / 1.5
@@ -78,15 +78,13 @@ const initFaceLandmarker = async () => {
   const vision = await FilesetResolver.forVisionTasks(
     dev
       ? "http://localhost:3001/undnet/files/models/@mediapipe/tasks-vision/wasm"
-      : // @ts-ignore
-        chrome.runtime.getURL("/models/@mediapipe/tasks-vision/wasm")
+      : localStorage.getItem("pathToModelScript") || ""
   )
   const faceLandmarker = await FaceLandmarker.createFromOptions(vision, {
     baseOptions: {
       modelAssetPath: dev
         ? "http://localhost:3001/undnet/files/models/face_landmarker.task"
-        : // @ts-ignore
-          chrome.runtime.getURL("/models/face_landmarker.task"),
+        : localStorage.getItem("pathToModel") || "",
     },
     runningMode: "VIDEO",
     numFaces: 1,
