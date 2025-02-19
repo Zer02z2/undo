@@ -1,5 +1,5 @@
-import { remoteControl } from "./remoteControl"
-import { stream } from "./stream"
+import { remoteControl } from "./remote-control/remoteControl"
+import { stream } from "./screen-share/stream"
 
 // @ts-ignore
 const pathToModelScript = chrome.runtime.getURL(

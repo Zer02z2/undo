@@ -35,6 +35,7 @@ export const stream = () => {
     canvas.style.left = "0"
     canvas.style.top = "0"
     canvas.style.pointerEvents = "none"
+    canvas.className = "ignore-effects"
     document.body.appendChild(canvas)
     return canvas
   }
@@ -143,29 +144,40 @@ export const stream = () => {
       if (canvas.width <= 0 || canvas.height <= 0) return
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
 
-      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
-      const data = imageData.data
       const mouseX = (canvas.width * peer.mouseX) / peer.videoW
       const mouseY = (canvas.height * peer.mouseY) / peer.videoH
-      for (let x = 0; x < canvas.width; x++) {
-        for (let y = 0; y < canvas.height; y++) {
-          const dist = Math.sqrt((mouseX - x) ** 2 + (mouseY - y) ** 2)
-          const innerRange = canvas.width / 20
-          const outerRange = innerRange * 1.25
-          if (dist >= innerRange && dist < outerRange) {
-            const alpha = Math.floor(
-              (1 - (dist - innerRange) / (outerRange - innerRange)) * 255
-            )
-            const index = (y * canvas.width + x) * 4
-            data[index + 3] = alpha
-          } else if (dist >= outerRange) {
-            const index = (y * canvas.width + x) * 4
-            data[index + 3] = 0
+      const innerRange = canvas.width / 15
+      const outerRange = innerRange * 1.25
+
+      const imageData = ctx.getImageData(
+        mouseX - outerRange,
+        mouseY - outerRange,
+        outerRange * 2,
+        outerRange * 2
+      )
+      const data = imageData.data
+
+      for (let x = 0; x < outerRange * 2; x++) {
+        for (let y = 0; y < outerRange * 2; y++) {
+          // const dist = Math.sqrt((mouseX - x) ** 2 + (mouseY - y) ** 2)
+          // if (dist >= innerRange && dist < outerRange) {
+          //   const alpha = Math.floor(
+          //     (1 - (dist - innerRange) / (outerRange - innerRange)) * 255
+          //   )
+          //   const index = (y * canvas.width + x) * 4
+          //   data[index + 3] = alpha
+          // } else if (dist >= outerRange) {
+          //   const index = (y * canvas.width + x) * 4
+          //   data[index + 3] = 0
+          // }
+          if (y % 4 == 0 || y % 6 == 0) {
+            const index = (outerRange * 2 * y + x) * 4
+            data[index + 3] = random(40, 100)
           }
         }
       }
       ctx.clearRect(0, 0, canvas.width, canvas.height)
-      ctx.putImageData(imageData, 0, 0)
+      ctx.putImageData(imageData, mouseX - outerRange, mouseY - outerRange)
     })
     requestAnimationFrame(animate)
   }
@@ -202,4 +214,8 @@ export const stream = () => {
 
   init()
   animate()
+}
+
+const random = (low: number, high: number) => {
+  return low + Math.random() * (high - low)
 }

@@ -1,3 +1,5 @@
+import { deleteAll } from "./delete"
+
 interface ElementData {
   target: HTMLElement
   translateData: {
@@ -28,6 +30,7 @@ export const remoteControl = () => {
       yCurrent: 1,
       yTarget: 1,
     },
+    deleteActivated: false,
   }
 
   const random = (low: number, high: number) => {
@@ -80,26 +83,29 @@ export const remoteControl = () => {
   socket.addEventListener("message", (event) => {
     //console.log(event.data)
     const [name, data] = event.data.split(":")
-    if (name == "potentiometer") {
+    if (name === "potentiometer") {
       globalVariables.shiftPercentage.target = data < 10 ? 0 : data / 1024
-      // } else if (name == "encoderY") {
-      //   if (data === 0) {
-      //     globalVariables.distort.yTarget -= 0.1
-      //   } else if (data == 1) {
-      //     globalVariables.distort.yTarget += 0.1
-      //   }
+    }
+    // else if (name == "encoderY") {
+    //   if (data === 0) {
+    //     globalVariables.distort.yTarget -= 0.1
+    //   } else if (data == 1) {
+    //     globalVariables.distort.yTarget += 0.1
+    //   }
+    // }
+    else if (name === "button") {
+      if (globalVariables.deleteActivated == true) return
+      globalVariables.deleteActivated = true
+      deleteAll()
     }
   })
 
   const animate = () => {
     window.requestAnimationFrame(animate)
-    const { shiftPercentage, distort } = globalVariables
+    const { shiftPercentage } = globalVariables
     shiftPercentage.current +=
-      (shiftPercentage.target - shiftPercentage.current) * 0.1
+      (shiftPercentage.target - shiftPercentage.current) * 0.2
     const { current } = shiftPercentage
-
-    distort.xCurrent += (distort.xTarget - distort.xCurrent) * 0.1
-    distort.yCurrent += (distort.yTarget - distort.yCurrent) * 0.1
 
     elementData.forEach((data) => {
       const { target, translateData } = data
@@ -108,9 +114,6 @@ export const remoteControl = () => {
       const scaleNow = scale + (newScale - scale) * current
       const xNow = `${translateX * current}px`
       const yNow = `${translateY * current}px`
-
-      // const distortX = data.isEndChild ? distort.xCurrent : 1
-      // const distortY = data.isEndChild ? distort.yCurrent : 1
 
       target.style.scale = scaleNow.toString()
       target.style.transform = `translateX(${xNow}) translateY(${yNow})`

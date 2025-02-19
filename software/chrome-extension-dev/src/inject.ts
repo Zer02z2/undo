@@ -1,4 +1,4 @@
-import { faceAnalyzer } from "./taskVision"
+import { faceAnalyzer } from "./tasks-vision/taskVision"
 
 const initModels = async () => {
   const faceData = await faceAnalyzer.create()
