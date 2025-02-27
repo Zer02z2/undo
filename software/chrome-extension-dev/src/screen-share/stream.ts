@@ -2,19 +2,33 @@ import { io } from "socket.io-client"
 import { Peer } from "peerjs"
 import { v4 as uuidv4 } from "uuid"
 import { UserData } from "../background"
+import { displayVideo } from "./displayVideo"
 
-export const stream = () => {
-  interface PeerUser {
-    id: string
-    canvas: HTMLCanvasElement
-    video?: HTMLVideoElement
-    mouseX: number | null
-    mouseY: number | null
+export interface PeerUser {
+  id: string
+  canvas: HTMLCanvasElement
+  video?: HTMLVideoElement
+  mouseX: number | null
+  mouseY: number | null
+  videoW: number
+  videoH: number
+  name: string
+}
+
+export interface SelfUser {
+  shared: {
+    mouseX: number
+    mouseY: number
     videoW: number
     videoH: number
     name: string
   }
+  local: {
+    canvas: HTMLCanvasElement
+  }
+}
 
+export const stream = () => {
   let currentPeers: PeerUser[] = []
 
   const roomId = 1
@@ -24,20 +38,6 @@ export const stream = () => {
       ? "http://localhost:3001/screenShare"
       : "https://io.zongzechen.com/screenShare"
   }`
-
-  const myData = {
-    mouseX: 0,
-    mouseY: 0,
-    videoW: window.innerWidth,
-    videoH: window.innerHeight,
-    name: "",
-  }
-  document.addEventListener("mousemove", (event) => {
-    myData.mouseX = event.clientX
-    myData.mouseY = event.clientY
-    myData.videoW = window.innerWidth
-    myData.videoH = window.innerHeight
-  })
 
   const createCanvas = () => {
     const canvas = document.createElement("canvas")
@@ -62,9 +62,24 @@ export const stream = () => {
     return video
   }
 
-  const myCanvas = createCanvas()
-  myCanvas.width = window.innerWidth
-  myCanvas.height = window.innerHeight
+  const self: SelfUser = {
+    shared: {
+      mouseX: 0,
+      mouseY: 0,
+      videoW: window.innerWidth,
+      videoH: window.innerHeight,
+      name: "",
+    },
+    local: {
+      canvas: createCanvas(),
+    },
+  }
+  document.addEventListener("mousemove", (event) => {
+    self.shared.mouseX = event.clientX
+    self.shared.mouseY = event.clientY
+    self.shared.videoW = window.innerWidth
+    self.shared.videoH = window.innerHeight
+  })
 
   const init = async () => {
     // @ts-ignore
@@ -79,7 +94,7 @@ export const stream = () => {
       // @ts-ignore
       chrome.storage.local.set({ data: userData })
     }
-    myData.name = userData.userName
+    self.shared.name = userData.userName
 
     const stream = await navigator.mediaDevices.getDisplayMedia({
       video: {
@@ -126,9 +141,9 @@ export const stream = () => {
           updatePeerData(peerUser, data)
         })
         window.addEventListener("mousemove", () => {
-          conn.send(myData)
+          conn.send(self.shared)
         })
-        conn.send(myData)
+        conn.send(self.shared)
       })
     })
 
@@ -146,9 +161,9 @@ export const stream = () => {
           updatePeerData(peerUser, data)
         })
         document.addEventListener("mousemove", () => {
-          conn.send(myData)
+          conn.send(self.shared)
         })
-        conn.send(myData)
+        conn.send(self.shared)
       })
     })
     socket.on("close-call", (userId) => {
@@ -158,94 +173,6 @@ export const stream = () => {
       peer.canvas.remove()
       currentPeers.splice(index, 1)
     })
-  }
-  const animate = () => {
-    const drawBoarder = (
-      ctx: CanvasRenderingContext2D,
-      //@ts-ignore
-      name: string,
-      color: string,
-      x: number,
-      y: number,
-      w: number,
-      h: number
-    ) => {
-      ctx.strokeStyle = color
-      ctx.lineWidth = 4
-      ctx.beginPath()
-      ctx.rect(x, y, w, h)
-      ctx.stroke()
-      ctx.fillStyle = color
-      ctx.beginPath()
-      ctx.roundRect(x, y, w * 0.6, h * 0.1, [0, 0, 5, 0])
-      ctx.fill()
-    }
-
-    const size = 0.1
-    const dpr = window.devicePixelRatio || 1
-    myCanvas.width = window.innerWidth * dpr
-    myCanvas.height = window.innerHeight * dpr
-    const myMouseX = myData.mouseX * dpr
-    const myMouseY = myData.mouseY * dpr
-    const myOuterRange = myCanvas.width * size * 1.25
-
-    currentPeers.forEach((peer) => {
-      const canvas = peer.canvas
-      const video = peer.video
-      const ctx = canvas.getContext("2d")
-      if (!(ctx && video && peer.mouseX && peer.mouseY)) return
-      canvas.width = video.videoWidth * dpr
-      canvas.height = video.videoHeight * dpr
-      if (canvas.width <= 0 || canvas.height <= 0) return
-      ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
-
-      const mouseX = (canvas.width * peer.mouseX) / peer.videoW
-      const mouseY = (canvas.height * peer.mouseY) / peer.videoH
-      const innerRange = canvas.width * size
-      const outerRange = innerRange * 1.25
-
-      const imageData = ctx.getImageData(
-        mouseX - outerRange,
-        mouseY - outerRange,
-        outerRange * 2,
-        outerRange * 2
-      )
-
-      ctx.clearRect(0, 0, canvas.width, canvas.height)
-      ctx.putImageData(imageData, mouseX - outerRange, mouseY - outerRange)
-      drawBoarder(
-        ctx,
-        peer.name,
-        "rgb(255, 208, 66)",
-        mouseX - outerRange,
-        mouseY - outerRange,
-        outerRange * 2,
-        outerRange * 2
-      )
-      ctx.clearRect(
-        (myMouseX / myCanvas.width) * canvas.width -
-          (myOuterRange / myCanvas.width) * canvas.width,
-        (myMouseY / myCanvas.height) * canvas.height -
-          (myOuterRange / myCanvas.height) * canvas.height,
-        (myOuterRange / myCanvas.width) * canvas.width * 2,
-        (myOuterRange / myCanvas.height) * canvas.height * 2
-      )
-    })
-
-    const myCtx = myCanvas.getContext("2d")
-    if (myCtx) {
-      myCtx.clearRect(0, 0, myCanvas.width, myCanvas.height)
-      drawBoarder(
-        myCtx,
-        myData.name,
-        "rgb(255, 208, 66)",
-        myMouseX - myOuterRange,
-        myMouseY - myOuterRange,
-        myOuterRange * 2,
-        myOuterRange * 2
-      )
-    }
-    requestAnimationFrame(animate)
   }
 
   const createPeer = (id: string) => {
@@ -279,6 +206,10 @@ export const stream = () => {
     peerUser.name = peerData.name
   }
 
+  const animate = () => {
+    displayVideo(self, currentPeers)
+    requestAnimationFrame(animate)
+  }
+
   init()
-  animate()
 }
