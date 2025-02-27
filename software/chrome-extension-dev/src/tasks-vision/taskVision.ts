@@ -153,9 +153,12 @@ const analyzeFace = (faceLandmarkerData: FaceLandmarkerData) => {
   ctx.putImageData(canvasData, 0, 0)
 
   const { x, y } = mousePositions
+  const headOffset = 7
   canvas.style.transform = `translateX(${
-    x - canvas.width / 2 - xOffset + headWidth / 5
-  }px) translateY(${y - canvas.height / 2 - yOffset + headHeight / 5}px)`
+    x - canvas.width / 2 - xOffset + headWidth / headOffset
+  }px) translateY(${
+    y - canvas.height / 2 - yOffset + headHeight / headOffset
+  }px)`
 }
 
 export const faceAnalyzer = {
