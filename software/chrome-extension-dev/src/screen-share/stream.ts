@@ -187,7 +187,7 @@ export const stream = () => {
     myCanvas.height = window.innerHeight * dpr
     const myMouseX = myData.mouseX * dpr
     const myMouseY = myData.mouseY * dpr
-    const myOuterRange = myCanvas.width * size * 1.25
+    const myOuterRange = window.innerWidth * size * 1.25
 
     currentPeers.forEach((peer) => {
       const canvas = peer.canvas
@@ -202,7 +202,7 @@ export const stream = () => {
       const mouseX = (canvas.width * peer.mouseX) / peer.videoW
       const mouseY = (canvas.height * peer.mouseY) / peer.videoH
       const innerRange = canvas.width * size
-      const outerRange = innerRange * 1.25
+      const outerRange = innerRange * 1
 
       const imageData = ctx.getImageData(
         mouseX - outerRange,
