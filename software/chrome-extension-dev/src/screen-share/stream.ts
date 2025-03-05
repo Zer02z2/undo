@@ -13,6 +13,7 @@ export interface PeerUser {
   videoW: number
   videoH: number
   name: string
+  color?: string
 }
 
 export interface SelfUser {
@@ -22,6 +23,8 @@ export interface SelfUser {
     videoW: number
     videoH: number
     name: string
+    color?: string
+    textColor?: string
   }
   local: {
     canvas: HTMLCanvasElement
@@ -69,32 +72,46 @@ export const stream = () => {
       videoW: window.innerWidth,
       videoH: window.innerHeight,
       name: "",
+      color: undefined,
+      textColor: undefined,
     },
     local: {
       canvas: createCanvas(),
     },
   }
-  document.addEventListener("mousemove", (event) => {
-    self.shared.mouseX = event.clientX
-    self.shared.mouseY = event.clientY
-    self.shared.videoW = window.innerWidth
-    self.shared.videoH = window.innerHeight
-  })
 
   const init = async () => {
-    // @ts-ignore
-    const userData: UserData = await chrome.storage.local.get("data")
-    if (!userData.id) {
-      userData.id = uuidv4()
+    document.addEventListener("mousemove", (event) => {
+      self.shared.mouseX = event.clientX
+      self.shared.mouseY = event.clientY
+      self.shared.videoW = window.innerWidth
+      self.shared.videoH = window.innerHeight
+    })
+    const updateSelfData = async () => {
+      // @ts-ignore
+      const bulb = await chrome.storage.local.get("data")
+      const userData: UserData = bulb.data
+      if (!userData.id) {
+        userData.id = uuidv4()
+      }
+      if (!userData.userName) {
+        userData.userName = userData.id
+      }
       // @ts-ignore
       chrome.storage.local.set({ data: userData })
+      self.shared.name = userData.userName
+      self.shared.color = userData.color
+      self.shared.textColor = userData.textColor
     }
-    if (!userData.userName) {
-      userData.userName = userData.id
-      // @ts-ignore
-      chrome.storage.local.set({ data: userData })
-    }
-    self.shared.name = userData.userName
+    await updateSelfData()
+
+    //@ts-ignore
+    chrome.runtime.onMessage.addListener((message) => {
+      console.log(message)
+      if (message.action === "dataChanged") {
+        updateSelfData()
+      }
+    })
 
     const stream = await navigator.mediaDevices.getDisplayMedia({
       video: {
@@ -198,12 +215,14 @@ export const stream = () => {
       videoW: number
       videoH: number
       name: string
+      color: string
     }
     peerUser.mouseX = peerData.mouseX
     peerUser.mouseY = peerData.mouseY
     peerUser.videoW = peerData.videoW
     peerUser.videoH = peerData.videoH
     peerUser.name = peerData.name
+    peerUser.color = peerData.color
   }
 
   const animate = () => {
@@ -212,4 +231,5 @@ export const stream = () => {
   }
 
   init()
+  animate()
 }
