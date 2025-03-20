@@ -1,2 +1,1 @@
-./sender/arduino_secrets.h
-./sender_test/arduino_secrets.h
+**/secrets.h
