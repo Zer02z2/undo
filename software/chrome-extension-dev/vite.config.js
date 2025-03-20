@@ -1,5 +1,6 @@
 import { basename } from "path"
 import fs from "fs"
+import { optimizeDeps } from "vite"
 
 function mediapipe_workaround() {
   return {
@@ -36,8 +37,10 @@ export default {
     rollupOptions: {
       //plugins: [mediapipe_workaround()],
       input: {
-        content: "/src/main.ts",
+        main: "/index.html",
+        inject: "/src/inject.ts",
         background: "/src/background.ts",
+        content: "/src/content.ts",
       },
       output: {
         dir: "../chrome-extension",

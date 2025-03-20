@@ -3,6 +3,9 @@ import { faceOvalIndexes } from "./faceOvalIndexes"
 
 const dev = false
 
+const headWidth = 640 / 1.5
+const headHeight = 480 / 1.5
+
 interface FaceLandmarkerData {
   faceLandmarker: FaceLandmarker
   canvas: HTMLCanvasElement
@@ -47,10 +50,11 @@ const createCanvas = (type: "canvas" | "mask") => {
   canvas.style.top = "0px"
   canvas.style.left = "0px"
   canvas.style.zIndex = "999"
-  canvas.width = 640
-  canvas.height = 480
+  canvas.width = headWidth
+  canvas.height = headHeight
   canvas.style.pointerEvents = "none"
   if (type === "canvas") {
+    canvas.style.transform = "scale(0.5)"
     const ctx = canvas.getContext("2d")
     if (ctx) {
       ctx.translate(canvas.width, 0)
@@ -71,25 +75,20 @@ const initWebcam = async () => {
 }
 
 const initFaceLandmarker = async () => {
-  console.log("mark1")
   const vision = await FilesetResolver.forVisionTasks(
     dev
-      ? "/node_modules/@mediapipe/tasks-vision/wasm"
-      : // @ts-ignore
-        chrome.runtime.getURL("/models/@mediapipe/tasks-vision/wasm")
+      ? "http://localhost:3001/undnet/files/models/@mediapipe/tasks-vision/wasm"
+      : localStorage.getItem("pathToModelScript") || ""
   )
-  console.log(vision)
   const faceLandmarker = await FaceLandmarker.createFromOptions(vision, {
     baseOptions: {
       modelAssetPath: dev
-        ? "/models/face_landmarker.task"
-        : // @ts-ignore
-          chrome.runtime.getURL("/models/face_landmarker.task"),
+        ? "http://localhost:3001/undnet/files/models/face_landmarker.task"
+        : localStorage.getItem("pathToModel") || "",
     },
     runningMode: "VIDEO",
     numFaces: 1,
   })
-  console.log("mark3")
   return faceLandmarker
 }
 
@@ -110,10 +109,16 @@ const analyzeFace = (faceLandmarkerData: FaceLandmarkerData) => {
   }
   const faceOvals = faceOvalIndexes.map((index) => {
     const flippedX = 0.5 - (result.faceLandmarks[0][index].x - 0.5)
-    const x = flippedX * canvas.width
-    const y = result.faceLandmarks[0][index].y * canvas.height
+    const x = flippedX * headWidth
+    const y = result.faceLandmarks[0][index].y * headHeight
     return { x: x, y: y }
   })
+  const leftMostX = Math.min(...faceOvals.map((oval) => oval.x))
+  const rightMostX = Math.max(...faceOvals.map((oval) => oval.x))
+  const upMostY = Math.min(...faceOvals.map((oval) => oval.y))
+  const downMostY = Math.max(...faceOvals.map((oval) => oval.y))
+  const xOffset = (leftMostX + rightMostX) / 2 - canvas.width / 2
+  const yOffset = (upMostY + downMostY) / 2 - canvas.height / 2
 
   maskCtx.fillStyle = "rgba(0, 0, 0, 0)"
   maskCtx.fillRect(0, 0, mask.width, mask.height)
@@ -148,8 +153,11 @@ const analyzeFace = (faceLandmarkerData: FaceLandmarkerData) => {
   ctx.putImageData(canvasData, 0, 0)
 
   const { x, y } = mousePositions
-  canvas.style.transform = `translateX(${x - canvas.width / 2}px) translateY(${
-    y - canvas.height / 2
+  const headOffset = 7
+  canvas.style.transform = `translateX(${
+    x - canvas.width / 2 - xOffset + headWidth / headOffset
+  }px) translateY(${
+    y - canvas.height / 2 - yOffset + headHeight / headOffset
   }px)`
 }
 
