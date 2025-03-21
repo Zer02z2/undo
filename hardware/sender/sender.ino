@@ -4,7 +4,7 @@
 #include <EncoderStepCounter.h>
 #include <SPI.h>
 
-#include "arduino_secrets.h"
+#include "secrets.h"
 ///////please enter your sensitive data in the Secret tab/arduino_secrets.h
 char ssid[] = SECRET_SSID;  // your network SSID (name)
 char pass[] = SECRET_PASS;  // your network password (use for WPA, or use as key for WEP)
@@ -14,31 +14,35 @@ MqttClient mqttClient(wifiClient);
 
 const char broker[] = "io.zongzechen.com";
 int port = 8883;
-const char topic[] = "undo-";
+const char topic[] = "undo";
 
 const int numOfReadings = 10;
-int pm1Readings[numOfReadings];
+int leverReadings[numOfReadings];
 int readIndex = 0;
 
-EncoderStepCounter encoderX(ENCODER_PIN1, ENCODER_PIN2);
-EncoderStepCounter encoderY(ENCODER_PIN3, ENCODER_PIN4);
-int oldPositionX = 0;
-int oldPositionY = 0;
+EncoderStepCounter encoder1(ENCODER_PIN1, ENCODER_PIN2);
+EncoderStepCounter encoder2(ENCODER_PIN3, ENCODER_PIN4);
+EncoderStepCounter encoder3(ENCODER_PIN5, ENCODER_PIN6);
+EncoderStepCounter encoder4(ENCODER_PIN7, ENCODER_PIN8);
 
-int lastButtonState = 0;
+char topics[4][10] = { "scroll1", "scroll2", "scroll3", "rotate" };
+int oldPositions[4] = { 0, 0, 0, 0 };
+
+int lastClearButtonState = 0;
+int lastCallSwitchState = 0;
 
 long lastSendTime = 0;
 int sendInterval = 100;
 
 void setup() {
   Watchdog.enable(8000);
-  pinMode(BUTTON_PIN, INPUT);
+  pinMode(CALL_SWITCH, INPUT);
+  pinMode(CLEAR_BUTTON, INPUT);
   //Initialize serial and wait for port to open:
   Serial.begin(9600);
   // while (!Serial) {
   //   ; // wait for serial port to connect. Needed for native USB port only
   // }
-
   // attempt to connect to WiFi network:
   Serial.print("Attempting to connect to WPA SSID: ");
   Serial.println(ssid);
@@ -47,51 +51,49 @@ void setup() {
     Serial.print(".");
     delay(1000);
   }
-  Watchdog.reset();
-
   Serial.println("You're connected to the network");
   Serial.println();
-
-  // You can provide a unique client ID, if not set the library uses Arduino-millis()
-  // Each client must have a unique client ID
-  // mqttClient.setId("clientId");
-
-  // You can provide a username and password for authentication
-  // mqttClient.setUsernamePassword("username", "password");
+  Watchdog.reset();
 
   Serial.print("Attempting to connect to the MQTT broker: ");
   Serial.println(broker);
 
   mqttClient.setUsernamePassword(MQTT_USER, MQTT_PASS);
-
   if (!mqttClient.connect(broker, port)) {
     Serial.print("MQTT connection failed! Error code = ");
     Serial.println(mqttClient.connectError());
-
     while (1)
       ;
   }
-
   Serial.println("You're connected to the MQTT broker!");
   Serial.println();
 
   for (int i = 0; i < numOfReadings; i++) {
-    pm1Readings[i] = 0;
+    leverReadings[i] = 0;
   }
 
-  encoderX.begin();
-  encoderY.begin();
+  encoder1.begin();
+  encoder2.begin();
+  encoder3.begin();
+  encoder4.begin();
   attachInterrupt(ENCODER_INT1, interrupt, CHANGE);
   attachInterrupt(ENCODER_INT2, interrupt, CHANGE);
   attachInterrupt(ENCODER_INT3, interrupt, CHANGE);
   attachInterrupt(ENCODER_INT4, interrupt, CHANGE);
+  attachInterrupt(ENCODER_INT5, interrupt, CHANGE);
+  attachInterrupt(ENCODER_INT6, interrupt, CHANGE);
+  attachInterrupt(ENCODER_INT7, interrupt, CHANGE);
+  attachInterrupt(ENCODER_INT8, interrupt, CHANGE);
+  pinMode(CLEAR_BUTTON, INPUT_PULLUP);
 
   Watchdog.reset();
 }
 
 void interrupt() {
-  encoderX.tick();
-  encoderY.tick();
+  encoder1.tick();
+  encoder2.tick();
+  encoder3.tick();
+  encoder4.tick();
 }
 
 void loop() {
@@ -100,62 +102,61 @@ void loop() {
 
   mqttClient.poll();
 
-  int positionX = encoderX.getPosition();
-  int positionY = encoderY.getPosition();
-
-  if (positionX != oldPositionX) {
-    int result = 0;
-    if (positionX > oldPositionX) {
-      result = 1;
+  for (int i = 0; i < 4; i++) {
+    int position;
+    if (i == 0) {position = encoder1.getPosition();}
+    else if (i == 1) {position = encoder2.getPosition();}
+    else if (i == 2) {position = encoder3.getPosition();}
+    else if (i == 3) {position = encoder4.getPosition();}
+    if (position != oldPositions[i]) {
+      int result;
+      if (position > oldPositions[i]) {
+        result = 1;
+      }
+      if (position < oldPositions[i]) {
+        result = 0;
+      }
+      oldPositions[i] = position;
+      Serial.print("Send encoder: ");
+      mqttClient.beginMessage(topic);
+      mqttClient.print(topics[i]);
+      mqttClient.print(":");
+      mqttClient.print(result);
+      mqttClient.endMessage();
+      Serial.println(result);
     }
-    if (positionX < oldPositionX) {
-      result = 0;
-    }
-    oldPositionX = positionX;
-    Serial.print("Send encoder: ");
-    mqttClient.beginMessage(topic);
-    mqttClient.print("encoderX:");
-    mqttClient.print(result);
-    mqttClient.endMessage();
-    Serial.println(result);
   }
-
-  if (positionY != oldPositionY) {
-    int result = 0;
-    if (positionY > oldPositionY) {
-      result = 1;
-    }
-    if (positionY < oldPositionY) {
-      result = 0;
-    }
-    oldPositionY = positionY;
-    Serial.print("Send encoder: ");
-    mqttClient.beginMessage(topic);
-    mqttClient.print("encoderY:");
-    mqttClient.print(result);
-    mqttClient.endMessage();
-    Serial.println(result);
-  }
-
-  int buttonState = digitalRead(BUTTON_PIN);
-  if (buttonState != lastButtonState && buttonState == HIGH) {
+  int clearButtonState = digitalRead(CLEAR_BUTTON);
+  if (clearButtonState != lastClearButtonState && clearButtonState == 0) {
     Serial.print("Send button: ");
     mqttClient.beginMessage(topic);
-    mqttClient.print("button:");
-    mqttClient.print(buttonState);
+    mqttClient.print("clear:");
+    mqttClient.print(clearButtonState);
     mqttClient.endMessage();
-    Serial.println(buttonState);
+    Serial.println(clearButtonState);
   }
-  lastButtonState = buttonState;
+  lastClearButtonState = clearButtonState;
 
-  int pmReading = analogRead(A7);
+  int callSwitchState = digitalRead(CALL_SWITCH);
+  if (callSwitchState != lastCallSwitchState && callSwitchState == HIGH) {
+    Serial.print("Send switch: ");
+    mqttClient.beginMessage(topic);
+    mqttClient.print("call:");
+    mqttClient.print(callSwitchState);
+    mqttClient.endMessage();
+    Serial.println(callSwitchState);
+  }
+  lastCallSwitchState = callSwitchState;
+
+  int leverReading = readLever();
   Serial.print("Send potentiometer: ");
   mqttClient.beginMessage(topic);
-  mqttClient.print("potentiometer:");
-  mqttClient.print(pmReading);
+  mqttClient.print("lever:");
+  mqttClient.print(leverReading);
   mqttClient.endMessage();
-  Serial.println(pmReading);
+  Serial.println(leverReading);
 
+  sendAlive();
   lastSendTime = millis();
   Watchdog.reset();
 
@@ -163,16 +164,24 @@ void loop() {
   // avoids being disconnected by the broker
 }
 
-int readPotentiometer1() {
-  int reading = analogRead(A7);
-  pm1Readings[readIndex] = reading;
+int readLever() {
+  int reading = analogRead(LEVER_PIN);
+  leverReadings[readIndex] = reading;
   readIndex++;
   if (readIndex >= numOfReadings) { readIndex = 0; }
   int sum = 0;
   for (int i = 0; i < numOfReadings; i++) {
-    sum += pm1Readings[i];
+    sum += leverReadings[i];
   }
   int average = sum / numOfReadings;
-  Serial.println(average);
+  //Serial.println(average);
   return average;
+}
+
+void sendAlive() {
+  Serial.println("Send alive");
+  mqttClient.beginMessage(topic);
+  mqttClient.print("alive:");
+  mqttClient.print(1);
+  mqttClient.endMessage();
 }
