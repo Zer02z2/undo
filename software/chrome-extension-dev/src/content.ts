@@ -1,4 +1,5 @@
-import { init3D, map } from "./remote-control/depth"
+import { deleteAll } from "./remote-control/delete"
+import { initTransform, map } from "./remote-control/transform"
 import { stream } from "./screen-share/stream"
 
 const eventBus = new EventTarget()
@@ -26,10 +27,17 @@ socket.addEventListener("message", (event) => {
     scrollAmount += 150 * (data === "1" ? 1 : -1)
   } else if (name === "scroll3") {
     scrollAmount += 50 * (data === "1" ? 1 : -1)
+  } else if (name === "rotate") {
+    const degree = 40
+    const value = data === "1" ? degree : -degree
+    eventBus.dispatchEvent(new CustomEvent("rotate", { detail: value }))
+  } else if (name === "clear") {
+    eventBus.dispatchEvent(new CustomEvent("clear"))
+    deleteAll()
   }
 })
 
-init3D(eventBus)
+initTransform(eventBus)
 
 const scroll = () => {
   requestAnimationFrame(scroll)
