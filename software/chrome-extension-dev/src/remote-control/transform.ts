@@ -54,15 +54,18 @@ export const initTransform = async (eventBus: EventTarget) => {
       const { target, distanceToRoot } = data
       target.style.overflow = "visible"
       target.style.zIndex = `${distanceToRoot}`
+      //target.style.backgroundColor = "rgb(220,220,220)"
     })
     animate()
   }
 
   const updateShadow = (elementData: HTMLElementData[], factor: number) => {
     elementData.forEach((data) => {
-      const { target } = data
-      const shadowOpacity = map(factor, 0, 1, 0, 1)
-      target.style.boxShadow = `0px 0px 1px 1px rgba(50, 50, 50, ${shadowOpacity})`
+      const { target, distanceToRoot } = data
+      let shadowOpacity = map(factor, 0, 1, 0, 1)
+      const shadowFactor = map(distanceToRoot, 0, maxDistance, 1, 0.2)
+      shadowOpacity *= shadowFactor
+      target.style.boxShadow = `0px 0px 0px 1px rgba(50, 50, 50, ${shadowOpacity})`
     })
   }
 
@@ -111,7 +114,7 @@ export const initTransform = async (eventBus: EventTarget) => {
       const { top, bottom, left, right } = target.getBoundingClientRect()
       if (bottom >= 0 && top <= window.innerHeight) {
         const midY = (bottom + top) / 2
-        const maxScale = 0.08 * globalFactor
+        const maxScale = 0.2 * globalFactor
         const baseDisplayY = window.innerHeight * 0.04 * globalFactor
         const baseDisplayX = window.innerWidth * 0.008 * globalFactor
 

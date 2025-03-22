@@ -1,16 +1,21 @@
 import { deleteAll } from "./remote-control/delete"
+import { initStatus } from "./remote-control/status"
 import { initTransform, map } from "./remote-control/transform"
 import { stream } from "./screen-share/stream"
 
 const eventBus = new EventTarget()
 let streamStarted = false
 let scrollAmount = 0
+let alive = false
+let lastAlive = new Date().getTime()
+const aliveThreshold = 2000
 const socket = new WebSocket("wss://io.zongzechen.com/undo/controller")
 
 socket.addEventListener("open", () => {
   console.log("socket connected!")
 })
 socket.addEventListener("message", (event) => {
+  lastAlive = new Date().getTime()
   const [name, data] = event.data.split(":")
   if (name === "call") {
     if (data === "1" && !streamStarted) {
@@ -38,6 +43,7 @@ socket.addEventListener("message", (event) => {
 })
 
 initTransform(eventBus)
+initStatus(eventBus)
 
 const scroll = () => {
   requestAnimationFrame(scroll)
@@ -51,6 +57,19 @@ const scroll = () => {
   }
 }
 scroll()
+
+const checkAlive = () => {
+  requestAnimationFrame(checkAlive)
+  const timeNow = new Date().getTime()
+  if (alive && timeNow - lastAlive > aliveThreshold) {
+    eventBus.dispatchEvent(new CustomEvent("alive", { detail: false }))
+    alive = false
+  } else if (!alive && timeNow - lastAlive < aliveThreshold) {
+    eventBus.dispatchEvent(new CustomEvent("alive", { detail: true }))
+    alive = true
+  }
+}
+checkAlive()
 
 const startStream = () => {
   // @ts-ignore
