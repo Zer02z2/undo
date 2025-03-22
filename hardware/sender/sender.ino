@@ -19,6 +19,8 @@ const char topic[] = "undo";
 const int numOfReadings = 10;
 int leverReadings[numOfReadings];
 int readIndex = 0;
+int lastLeverReading = 0;
+int leverThreshold = 5;
 
 EncoderStepCounter encoder1(ENCODER_PIN1, ENCODER_PIN2);
 EncoderStepCounter encoder2(ENCODER_PIN3, ENCODER_PIN4);
@@ -97,6 +99,7 @@ void interrupt() {
 }
 
 void loop() {
+  updateLever();
   if (wifiClient.status() != 4 && mqttClient.connected() != 1) return;
   if (millis() - lastSendTime < sendInterval) return;
 
@@ -104,10 +107,15 @@ void loop() {
 
   for (int i = 0; i < 4; i++) {
     int position;
-    if (i == 0) {position = encoder1.getPosition();}
-    else if (i == 1) {position = encoder2.getPosition();}
-    else if (i == 2) {position = encoder3.getPosition();}
-    else if (i == 3) {position = encoder4.getPosition();}
+    if (i == 0) {
+      position = encoder1.getPosition();
+    } else if (i == 1) {
+      position = encoder2.getPosition();
+    } else if (i == 2) {
+      position = encoder3.getPosition();
+    } else if (i == 3) {
+      position = encoder4.getPosition();
+    }
     if (position != oldPositions[i]) {
       int result;
       if (position > oldPositions[i]) {
@@ -138,25 +146,25 @@ void loop() {
   lastClearButtonState = clearButtonState;
 
   int callSwitchState = digitalRead(CALL_SWITCH);
-  if (callSwitchState != lastCallSwitchState && callSwitchState == HIGH) {
-    Serial.print("Send switch: ");
-    mqttClient.beginMessage(topic);
-    mqttClient.print("call:");
-    mqttClient.print(callSwitchState);
-    mqttClient.endMessage();
-    Serial.println(callSwitchState);
-  }
-  lastCallSwitchState = callSwitchState;
+  Serial.print("Send switch: ");
+  mqttClient.beginMessage(topic);
+  mqttClient.print("call:");
+  mqttClient.print(callSwitchState);
+  mqttClient.endMessage();
+  Serial.println(callSwitchState);
 
   int leverReading = readLever();
-  Serial.print("Send potentiometer: ");
-  mqttClient.beginMessage(topic);
-  mqttClient.print("lever:");
-  mqttClient.print(leverReading);
-  mqttClient.endMessage();
-  Serial.println(leverReading);
+  if (abs(leverReading - lastLeverReading) > leverThreshold) {
+    Serial.print("Send potentiometer: ");
+    mqttClient.beginMessage(topic);
+    mqttClient.print("lever:");
+    mqttClient.print(leverReading);
+    mqttClient.endMessage();
+    Serial.println(leverReading);
+    lastLeverReading = leverReading;
+  }
 
-  sendAlive();
+  //sendAlive();
   lastSendTime = millis();
   Watchdog.reset();
 
@@ -164,11 +172,14 @@ void loop() {
   // avoids being disconnected by the broker
 }
 
-int readLever() {
+int updateLever() {
   int reading = analogRead(LEVER_PIN);
   leverReadings[readIndex] = reading;
   readIndex++;
   if (readIndex >= numOfReadings) { readIndex = 0; }
+}
+
+int readLever() {
   int sum = 0;
   for (int i = 0; i < numOfReadings; i++) {
     sum += leverReadings[i];

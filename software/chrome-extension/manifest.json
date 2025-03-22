@@ -1,6 +1,6 @@
 {
-  "manifest_version": 2,
-  "name": "Remote control",
+  "manifest_version": 3,
+  "name": "Undo",
   "version": "1.0.0",
   "action": {
     "default_popup": "index.html"
