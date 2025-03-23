@@ -61,6 +61,7 @@ export const initTransform = async (eventBus: EventTarget) => {
 
   const updateShadow = (elementData: HTMLElementData[], factor: number) => {
     elementData.forEach((data) => {
+      // @ts-ignore
       const { target, distanceToRoot } = data
       let shadowOpacity = map(factor, 0, 1, 0, 1)
       const shadowFactor = map(distanceToRoot, 0, maxDistance, 1, 0.2)

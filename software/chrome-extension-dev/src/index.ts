@@ -1,14 +1,16 @@
 import { UserData } from "./background"
 
+const deviceIdInput = document.getElementById("device-id") as HTMLInputElement
 const nameInput = document.getElementById("name") as HTMLInputElement
 const colorInput = document.getElementById("color") as HTMLInputElement
 const textColorInput = document.getElementById("text-color") as HTMLInputElement
 
 const init = async () => {
-  if (!(nameInput && colorInput && textColorInput)) return
+  if (!(deviceIdInput && nameInput && colorInput && textColorInput)) return
   //@ts-ignore
   const bulb = await chrome.storage.local.get("data")
   const data: UserData = bulb.data
+  deviceIdInput.value = data.deviceId || ""
   nameInput.value = data.userName || ""
   colorInput.value = data.color || ""
   textColorInput.value = data.textColor || ""
@@ -29,6 +31,10 @@ const init = async () => {
     })
   }
 
+  deviceIdInput.addEventListener("keyup", () => {
+    data.deviceId = deviceIdInput.value
+    updateMessage()
+  })
   nameInput.addEventListener("keyup", () => {
     data.userName = nameInput.value
     updateMessage()

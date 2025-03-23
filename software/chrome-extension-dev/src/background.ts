@@ -3,6 +3,7 @@ export interface UserData {
   userName: string | undefined
   color: string | undefined
   textColor: string | undefined
+  deviceId: string | undefined
 }
 
 const init = () => {
@@ -15,6 +16,7 @@ const init = () => {
         userName: undefined,
         color: "rgb(112, 255, 169)",
         textColor: "rgb(0, 0, 0)",
+        deviceId: undefined,
       },
     })
   })

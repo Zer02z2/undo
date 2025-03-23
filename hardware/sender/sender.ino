@@ -14,7 +14,7 @@ MqttClient mqttClient(wifiClient);
 
 const char broker[] = "io.zongzechen.com";
 int port = 8883;
-const char topic[] = "undo";
+char topic[10];
 
 const int numOfReadings = 10;
 int leverReadings[numOfReadings];
@@ -38,6 +38,8 @@ int sendInterval = 100;
 
 void setup() {
   Watchdog.enable(8000);
+  strcpy(topic, "undo/");
+  strcat(topic, DEVICE_ID);
   pinMode(CALL_SWITCH, INPUT);
   pinMode(CLEAR_BUTTON, INPUT);
   //Initialize serial and wait for port to open:
