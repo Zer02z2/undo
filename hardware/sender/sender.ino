@@ -42,6 +42,11 @@ void setup() {
   strcat(topic, DEVICE_ID);
   pinMode(CALL_SWITCH, INPUT);
   pinMode(CLEAR_BUTTON, INPUT);
+  pinMode(YELLOW_LED, OUTPUT);
+  pinMode(GREEN_LED, OUTPUT);
+
+  digitalWrite(YELLOW_LED, HIGH);
+  digitalWrite(GREEN_LED, LOW);
   //Initialize serial and wait for port to open:
   Serial.begin(9600);
   // while (!Serial) {
@@ -102,8 +107,15 @@ void interrupt() {
 
 void loop() {
   updateLever();
-  if (wifiClient.status() != 4 && mqttClient.connected() != 1) return;
+  if (wifiClient.status() != 4 && mqttClient.connected() != 1) {
+    digitalWrite(YELLOW_LED, HIGH);
+    digitalWrite(GREEN_LED, LOW);
+    return;
+  } 
   if (millis() - lastSendTime < sendInterval) return;
+
+  digitalWrite(YELLOW_LED, LOW);
+  digitalWrite(GREEN_LED, HIGH);
 
   mqttClient.poll();
 
